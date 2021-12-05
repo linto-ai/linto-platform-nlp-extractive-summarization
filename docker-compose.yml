@@ -1,0 +1,13 @@
+version: "3.9"
+services:
+  extsumm:
+    build: .
+    image: lintoai/linto-platform-nlp-extractive-summarization:latest
+    ports:
+      - "80:80"
+    env_file:
+      - .env
+    volumes:
+      - $ASSETS_PATH_ON_HOST:$ASSETS_PATH_IN_CONTAINER:ro
+    command: ["--workers", $WORKER_NUMBER]
+    runtime: nvidia
