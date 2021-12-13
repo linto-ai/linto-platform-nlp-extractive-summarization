@@ -79,7 +79,7 @@ sudo docker-compose up
 | `fr` | [sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2](https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2) | 418 MB |
 
 ### Request
-Please use `" | "` (with a white-space on the left and right side) to seperate the sentences, paragraphs, etc., which will be considered as the units for extractivee summarization.
+Please use `" | "` (with a white-space on the left and right side) to seperate the segments (e.g., sentences, paragraphs, documents, etc.), which will be considered as the units for extractive summarization.
 ```json
 {
   "articles": [
