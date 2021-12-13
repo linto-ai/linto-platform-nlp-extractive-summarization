@@ -15,7 +15,7 @@ class ExtractiveSummarizer:
         runtime_kwargs = {}
         runtime_kwargs.update(self.kwargs)
         runtime_kwargs.update(kwargs)
-        sentences = [sent.text.split('|')[0].strip() for sent in doc.sents]
-        doc._.extractive_summary = self.model.run(sentences, **runtime_kwargs)
+        segments = [seg.text.split('|')[0].strip() for seg in doc.sents]
+        doc._.extractive_summary = self.model.run(segments, **runtime_kwargs)
         
         return doc
