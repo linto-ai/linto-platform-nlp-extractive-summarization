@@ -1,2 +1,3 @@
 # Extractive Summarization
 bert-extractive-summarizer==0.9.0
+sacremoses

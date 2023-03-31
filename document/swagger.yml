@@ -1,0 +1,75 @@
+openapi: 3.0.1
+info:
+  title: Extractive Summarization API
+  description: API to detect extractive summary in text.
+  version: 0.2.0
+
+servers:
+- url: /
+
+paths:
+  /extsumm/{lang}:
+    post:
+      tags:
+      - Extractive Summarization API
+      summary: Perform Extractive Summarization
+      parameters:
+        - name: lang
+          in: path
+          required: true
+          description: Language
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/request'
+      responses:
+        200:
+          description: "Job successfully finished"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/responsemodel'
+        400:
+          description: "Bad request"
+        500:
+          description: "Server error"
+        
+components:
+  schemas:
+    article:
+      type: object
+      properties:
+        text:
+          type: string
+          default: This is an article.
+    request:
+      type: object
+      properties:
+        articles:
+          type: array
+          required: true
+          items:
+            $ref: '#/components/schemas/article'
+        component_cfg:
+          type: object
+    batch:
+      type: object
+      properties:
+        text:
+          type: string
+        extractive_summary:
+          type: array
+          items:
+            type: string
+    
+    responsemodel:
+      type: object
+      properties:
+        ner:
+          type: array
+          items:
+            $ref: '#/components/schemas/batch'
+        
