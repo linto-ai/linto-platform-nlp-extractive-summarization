@@ -68,7 +68,7 @@ components:
     responsemodel:
       type: object
       properties:
-        ner:
+        extsumm:
           type: array
           items:
             $ref: '#/components/schemas/batch'
