@@ -9,4 +9,4 @@ services:
       - .env
     volumes:
       - $ASSETS_PATH_ON_HOST:$ASSETS_PATH_IN_CONTAINER:ro
-    #runtime: nvidia
+    runtime: nvidia

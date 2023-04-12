@@ -22,6 +22,7 @@ else
         fi
         /usr/src/app/wait-for-it.sh $(echo $SERVICES_BROKER | cut -d'/' -f 3) --timeout=20 --strict -- echo " $SERVICES_BROKER (Service Broker) is up"
         echo "RUNNING CELERY WORKER"
+        POOL=$([ $USE_GPU == "True" ] && echo "gevent" || echo "prefork")
         celery --app=celery_app.celeryapp worker -Ofair -n nlp_${SERVICE_NAME}_worker@%h --queues=${SERVICE_NAME} -c ${CONCURRENCY}
     else
         echo "ERROR: Wrong serving command: $1"

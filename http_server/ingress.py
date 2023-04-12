@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import json
 import logging
 from time import time
@@ -8,7 +9,7 @@ import spacy
 import components
 
 from flask import Flask, request, abort, Response, json
-from serving import GunicornServing
+from serving import GeventServing, GunicornServing
 from confparser import createParser
 from swagger import setupSwaggerUI
 
@@ -87,8 +88,15 @@ if __name__ == '__main__':
             logger.debug("Swagger UI set.")
     except Exception as e:
         logger.warning("Could not setup swagger: {}".format(str(e)))
+
+    if os.environ.get("USE_GPU", "True") == "True":
+        serving_type = GeventServing
+        logger.debug("Serving with gevent")
+    else:
+        serving_type = GunicornServing
+        logger.debug("Serving with gunicorn")
     
-    serving = GunicornServing(app, {'bind': '{}:{}'.format("0.0.0.0", args.service_port),
+    serving = serving_type(app, {'bind': '{}:{}'.format("0.0.0.0", args.service_port),
                                     'workers': args.workers,})
     logger.info(args)
     try:
