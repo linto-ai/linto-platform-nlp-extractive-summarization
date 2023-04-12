@@ -2,10 +2,7 @@
 APP_LANG=fr en
 ASSETS_PATH_ON_HOST=./assets
 ASSETS_PATH_IN_CONTAINER=/app/assets
-LM_MAP = "{
-    'fr': 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
-    'en': 'sentence-transformers/all-MiniLM-L6-v2'
-}"
+LM_MAP={"fr":"sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2","en":"sentence-transformers/all-MiniLM-L6-v2"}
 
 # SERVING PARAMETERS
 SERVICE_MODE=http
