@@ -9,5 +9,4 @@ services:
       - .env
     volumes:
       - $ASSETS_PATH_ON_HOST:$ASSETS_PATH_IN_CONTAINER:ro
-    command: ["--workers", $WORKER_NUMBER]
     runtime: nvidia

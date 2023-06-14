@@ -3,12 +3,9 @@
 ## Description
 This repository is for building a Docker image for LinTO's NLP service: Extractive Summarization on the basis of [linto-platform-nlp-core](https://github.com/linto-ai/linto-platform-nlp-core), can be deployed along with [LinTO stack](https://github.com/linto-ai/linto-platform-stack) or in a standalone way (see Develop section in below).
 
-linto-platform-nlp-extractive-summarization is backed by [spaCy](https://spacy.io/) v3.0+ featuring transformer-based pipelines, thus deploying with GPU support is highly recommeded for inference efficiency.
+LinTo's NLP services adopt the basic design concept of spaCy: [component and pipeline](https://spacy.io/usage/processing-pipelines), components (located under the folder `components/`) are decoupled from the service and can be easily re-used in other spaCy projects, components are organised into pipelines for realising specific NLP tasks. 
 
-LinTo's NLP services adopt the basic design concept of spaCy: [component and pipeline](https://spacy.io/usage/processing-pipelines), components are decoupled from the service and can be easily re-used in other projects, components are organised into pipelines for realising specific NLP tasks. 
-
-This service uses [FastAPI](https://fastapi.tiangolo.com/) to serve custom spaCy's components as pipelines:
-- `extsumm`: Extractive Summarization
+This service can be launched in two ways: REST API and Celery task, with and without GPU support.
 
 ## Usage
 
@@ -29,13 +26,21 @@ bash scripts/download_models.sh
 
 2 configure running environment variables
 ```bash
-mv .envdefault .env
-# cat .envdefault
-# APP_LANG=fr en | Running language of application, "fr en", "fr", etc.
-# ASSETS_PATH_ON_HOST=./assets | Storage path of models on host. (only applicable when docker-compose is used)
-# ASSETS_PATH_IN_CONTAINER=/app/assets | Volume mount point of models in container. (only applicable when docker-compose is used)
-# WORKER_NUMBER=1 | Number of processing workers. (only applicable when docker-compose is used)
+cp .envdefault .env
 ```
+
+| Environment Variable | Description | Default Value |
+| --- | --- | --- |
+| `APP_LANG` | A space-separated list of supported languages for the application | fr en |
+| `ASSETS_PATH_ON_HOST` | The path to the assets folder on the host machine | ./assets |
+| `ASSETS_PATH_IN_CONTAINER` | The volume mount point of models in container | /app/assets |
+| `LM_MAP` | A JSON string that maps each supported language to its corresponding language model | {"fr":"sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2","en":"sentence-transformers/all-MiniLM-L6-v2"} |
+| `SERVICE_MODE` | The mode in which the service is served, either "http" (REST API) or "task" (Celery task) | "http" |
+| `CONCURRENCY` | The maximum number of requests that can be handled concurrently | 1 |
+| `USE_GPU` | A flag indicating whether to use GPU for computation or not, either "True" or "False" | True |
+| `SERVICE_NAME` | The name of the micro-service | extsumm |
+| `SERVICES_BROKER` | The URL of the broker server used for communication between micro-services | "redis://localhost:6379" |
+| `BROKER_PASS` | The password for accessing the broker server | None |
 
 4 Build image
 ```bash
@@ -52,22 +57,29 @@ sudo docker run --gpus all \
 --rm -p 80:80 \
 -v $PWD/assets:/app/assets:ro \
 --env-file .env \
-lintoai/linto-platform-nlp-extractive-summarization:latest \
---workers 1
+lintoai/linto-platform-nlp-extractive-summarization:latest
 ```
+<details>
+  <summary>Check running with CPU only setting</summary>
+  
+  - remove `--gpus all` from the first command.
+  - set `USE_GPU=False` in the `.env`.
+</details>
+
 or
+
 ```bash
 sudo docker-compose up
 ```
 <details>
   <summary>Check running with CPU only setting</summary>
   
-  - remove `--gpus all` from the first command.
   - remove `runtime: nvidia` from the `docker-compose.yml` file.
+  - set `USE_GPU=False` in the `.env`.
 </details>
 
 
-6 Navigate to `http://localhost/docs` or `http://localhost/redoc` in your browser, to explore the REST API interactively. See the examples for how to query the API.
+6 If running under `SERVICE_MODE=http`, navigate to `http://localhost/docs` or `http://localhost/redoc` in your browser, to explore the REST API interactively. See the examples for how to query the API. If running under `SERVICE_MODE=task`, plese refers to the individual section in the end of this README.
 
 
 ## Specification for `http://localhost/extsumm/{lang}`
@@ -167,3 +179,31 @@ Component's config can be modified in [`components/config.cfg`](components/confi
 
 ### Implementation details
 This repository only intergrates the [Bert Extractive Summarizer](https://github.com/dmmiller612/bert-extractive-summarizer) with [Sentence Transformers](https://www.sbert.net/) embeddings, the usage of general Hugging Face transformers, Elbow calculation, and coreference techniques are not implemented.
+
+
+## Testing Celery mode locally
+1 Install Redis on your local machine, and run it with:
+```bash
+redis-server --protected-mode no --bind 0.0.0.0 --loglevel debug
+```
+
+2 Make sure in your `.env`, these two variables are set correctly as `SERVICE_MODE=task` and `SERVICES_BROKER=redis://172.17.0.1:6379`
+
+Then start your docker container with either `docker run` or `docker-compose up` as shown in the previous section.
+
+3 On your local computer, run this python script: 
+```python
+from celery import Celery
+celery = Celery(broker='redis://localhost:6379/0', backend='redis://localhost:6379/1')
+r = celery.send_task(
+    'extsumm_task', 
+    (
+        'en', 
+        [
+            "The Chrysler Building, the famous art deco New York skyscraper, will be sold for a small fraction of its previous sales price. | The deal, first reported by The Real Deal, was for $150 million, according to a source familiar with the deal. | Mubadala, an Abu Dhabi investment fund, purchased 90% of the building for $800 million in 2008. | Real estate firm Tishman Speyer had owned the other 10%. | The buyer is RFR Holding, a New York real estate company. | Officials with Tishman and RFR did not immediately respond to a request for comments. | It's unclear when the deal will close. | The building sold fairly quickly after being publicly placed on the market only two months ago. | The sale was handled by CBRE Group. | The incentive to sell the building at such a huge loss was due to the soaring rent the owners pay to Cooper Union, a New York college, for the land under the building. | The rent is rising from $7.75 million last year to $32.5 million this year to $41 million in 2028. | Meantime, rents in the building itself are not rising nearly that fast. | While the building is an iconic landmark in the New York skyline, it is competing against newer office towers with large floor-to-ceiling windows and all the modern amenities. | Still the building is among the best known in the city, even to people who have never been to New York. | It is famous for its triangle-shaped, vaulted windows worked into the stylized crown, along with its distinctive eagle gargoyles near the top. | It has been featured prominently in many films, including Men in Black 3, Spider-Man, Armageddon, Two Weeks Notice and Independence Day. | The previous sale took place just before the 2008 financial meltdown led to a plunge in real estate prices. | Still there have been a number of high profile skyscrapers purchased for top dollar in recent years, including the Waldorf Astoria hotel, which Chinese firm Anbang Insurance purchased in 2016 for nearly $2 billion, and the Willis Tower in Chicago, which was formerly known as Sears Tower, once the world's tallest. | Blackstone Group (BX) bought it for $1.3 billion 2015. | The Chrysler Building was the headquarters of the American automaker until 1953, but it was named for and owned by Chrysler chief Walter Chrysler, not the company itself. | Walter Chrysler had set out to build the tallest building in the world, a competition at that time with another Manhattan skyscraper under construction at 40 Wall Street at the south end of Manhattan. He kept secret the plans for the spire that would grace the top of the building, building it inside the structure and out of view of the public until 40 Wall Street was complete. | Once the competitor could rise no higher, the spire of the Chrysler building was raised into view, giving it the title."
+        ],
+        {"extsumm": {"num_sentences": 3}}
+    ),
+    queue='extsumm')
+r.get()
+```

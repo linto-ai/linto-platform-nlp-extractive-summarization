@@ -1,16 +1,20 @@
 FROM lintoai/linto-platform-nlp-core:latest
 LABEL maintainer="gshang@linagora.com"
 
-WORKDIR /app
+WORKDIR /usr/src/app
 
-COPY ./requirements.txt /app/
+COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY .envdefault /app/
-COPY ./scripts /app/scripts
-COPY ./components /app/components
+COPY extsumm /usr/src/app/extsumm
+COPY components /usr/src/app/components
+COPY celery_app /usr/src/app/celery_app
+COPY http_server /usr/src/app/http_server
+COPY document /usr/src/app/document
+COPY docker-entrypoint.sh wait-for-it.sh healthcheck.sh ./
 
-HEALTHCHECK --interval=15s CMD curl -fs http://0.0.0.0/health || exit 1
+ENV PYTHONPATH="${PYTHONPATH}:/usr/src/app/extsumm"
 
-ENTRYPOINT ["/opt/conda/bin/gunicorn", "scripts.main:app", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:80", "--access-logfile", "-", "--error-logfile", "-"]
-CMD ["--workers", "1"]
+HEALTHCHECK CMD ./healthcheck.sh
+
+ENTRYPOINT ["./docker-entrypoint.sh"]
